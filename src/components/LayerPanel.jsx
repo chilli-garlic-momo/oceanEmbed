@@ -130,7 +130,7 @@ export function LayerPanel({
       <div className="about-layer-card">
         <div className="about-layer-header">
           <span className="about-layer-title">{activeLayerItem.aboutTitle}</span>
-          <Info size={13} style={{ color: 'var(--accent-cyan)' }} />
+          <Info size={13} style={{ color: 'var(--text-secondary)' }} />
         </div>
         <p className="about-layer-body">{activeLayerItem.aboutText}</p>
       </div>

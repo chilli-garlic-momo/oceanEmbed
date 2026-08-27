@@ -1,7 +1,8 @@
 import React from 'react';
 import { Info, Calendar, Sun, Moon } from 'lucide-react';
+import oceanEmbedLogo from '../assets/oceanembed-icon.png';
 import { IncoisLogo, NoaaLogo, ArgoLogo, NasaLogo } from './InstitutionalLogos';
-import { getTranslation, formatLocalizedDate } from '../data/i18n';
+import { getTranslation, formatLocalizedDate, SUPPORTED_LANGUAGES } from '../data/i18n';
 
 export function Header({
   onOpenAbout,
@@ -18,20 +19,14 @@ export function Header({
       {/* 1. Brand Section */}
       <div className="header-left">
         <div className="brand-logo-link" onClick={() => window.location.reload()} title="Reload OceanEmbed Platform">
-          <div className="brand-wave-icon">
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#00D9FF"
-              strokeWidth="2.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M2 12c.6-2.5 2.5-4 4.5-4 3 0 3 4 6 4s3-4 6-4c2 0 3.9 1.5 4.5 4" />
-              <path d="M2 17c.6-2.5 2.5-4 4.5-4 3 0 3 4 6 4s3-4 6-4c2 0 3.9 1.5 4.5 4" />
-            </svg>
+          <div className="brand-wave-icon" title="OceanEmbed Logo">
+            <img
+              src={oceanEmbedLogo}
+              alt="OceanEmbed Logo"
+              className="brand-logo-img"
+              width="36"
+              height="36"
+            />
           </div>
           <div className="brand-text-block">
             <h1 className="brand-title">
@@ -77,7 +72,7 @@ export function Header({
       {/* 3. Ingestion Time, Theme Toggle, Language Switcher & About */}
       <div className="header-right">
         <div className="header-data-date">
-          <Calendar size={13} style={{ color: 'var(--accent-cyan)' }} />
+          <Calendar size={13} style={{ color: 'var(--text-secondary)' }} />
           <span>{t('header.analysisCycle')}</span>
           <strong>{formatLocalizedDate(currentDate, currentLang, true)}</strong>
         </div>
@@ -94,7 +89,7 @@ export function Header({
             {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
           </button>
 
-          {/* Compact Language Selector (EN / हिन्दी) */}
+          {/* Multi-Language Selector (English primary, Hindi 2nd, followed by Indian Regional Languages) */}
           <select
             id="select-language"
             className="lang-switcher-dropdown"
@@ -103,8 +98,11 @@ export function Header({
             title={t('header.langSelect')}
             aria-label="Select Language"
           >
-            <option value="en">EN ▾</option>
-            <option value="hi">हिन्दी</option>
+            {SUPPORTED_LANGUAGES.map((lang) => (
+              <option key={lang.code} value={lang.code}>
+                {lang.native} ({lang.label})
+              </option>
+            ))}
           </select>
         </div>
 

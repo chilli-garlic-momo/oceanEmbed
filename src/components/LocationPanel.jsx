@@ -89,7 +89,7 @@ export function LocationPanel({
       {/* 1. Header */}
       <div className="location-details-header">
         <div className="location-header-left">
-          <Activity size={14} style={{ color: 'var(--accent-cyan)' }} />
+          <Activity size={14} style={{ color: 'var(--text-secondary)' }} />
           <span className="location-title-main">{t('location.pointInspection')}</span>
         </div>
         <button className="btn-close-panel" onClick={onClose} title={t('location.deselectLocation')}>
@@ -158,7 +158,7 @@ export function LocationPanel({
         {isLoadingProfile && !isPlaying && (
           <div className="chart-loading-overlay">
             <div className="spinner-ring" />
-            <span style={{ fontSize: '0.72rem', color: 'var(--accent-cyan)' }}>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
               {t('location.reconstructingProfile')}
             </span>
           </div>
