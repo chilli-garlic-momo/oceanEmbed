@@ -222,7 +222,7 @@ export function App() {
       {/* Toast Notification */}
       {toastMessage && (
         <div className="toast-notification-pill">
-          <Info size={14} style={{ color: 'var(--accent-cyan)' }} />
+          <Info size={14} style={{ color: 'var(--accent-primary)' }} />
           <span>{toastMessage}</span>
         </div>
       )}

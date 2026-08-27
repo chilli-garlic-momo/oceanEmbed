@@ -13,7 +13,7 @@ export function Footer({ onOpenAbout, currentLang = 'en', selectedLocation }) {
   return (
     <footer className="app-footer">
       <div className="footer-item-group">
-        <Compass size={12} style={{ color: 'var(--accent-cyan)' }} />
+        <Compass size={12} style={{ color: 'var(--text-secondary)' }} />
         <span>{basinText}</span>
       </div>
 

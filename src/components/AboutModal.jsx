@@ -12,7 +12,7 @@ export function AboutModal({ isOpen, onClose, currentLang = 'en' }) {
       <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="modal-title">
-            <Cpu size={16} style={{ color: 'var(--accent-cyan)' }} />
+            <Cpu size={16} style={{ color: 'var(--text-secondary)' }} />
             <span>{t('about.title')}</span>
           </div>
           <button className="btn-close-modal" onClick={onClose}>
@@ -28,7 +28,7 @@ export function AboutModal({ isOpen, onClose, currentLang = 'en' }) {
           <div className="modal-feature-grid">
             <div className="feature-box">
               <div className="feature-box-title">
-                <IncoisLogo size={16} style={{ marginRight: '6px' }} />
+                <IncoisLogo size={16} />
                 <span>INCOIS / MoES</span>
               </div>
               <p className="feature-box-desc">{t('about.incoisDesc')}</p>
@@ -36,7 +36,7 @@ export function AboutModal({ isOpen, onClose, currentLang = 'en' }) {
 
             <div className="feature-box">
               <div className="feature-box-title">
-                <NoaaLogo size={16} style={{ marginRight: '6px' }} />
+                <NoaaLogo size={16} />
                 <span>NOAA Coral Reef Watch & AOML</span>
               </div>
               <p className="feature-box-desc">{t('about.noaaDesc')}</p>
@@ -44,7 +44,7 @@ export function AboutModal({ isOpen, onClose, currentLang = 'en' }) {
 
             <div className="feature-box">
               <div className="feature-box-title">
-                <ArgoLogo size={16} style={{ marginRight: '6px' }} />
+                <ArgoLogo size={16} />
                 <span>ARGO Global Profiling Network</span>
               </div>
               <p className="feature-box-desc">{t('about.argoDesc')}</p>
@@ -52,7 +52,7 @@ export function AboutModal({ isOpen, onClose, currentLang = 'en' }) {
 
             <div className="feature-box">
               <div className="feature-box-title">
-                <NasaLogo size={16} style={{ marginRight: '6px' }} />
+                <NasaLogo size={16} />
                 <span>NASA Ocean Physics / JPL</span>
               </div>
               <p className="feature-box-desc">{t('about.nasaDesc')}</p>

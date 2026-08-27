@@ -159,7 +159,7 @@ export function Timeline({
             onClick={() => setIsCalendarOpen(!isCalendarOpen)}
             title={t('timeline.selectDate') || 'Select exact date'}
           >
-            <Calendar size={13} style={{ color: 'var(--accent-cyan)' }} />
+            <Calendar size={13} style={{ color: 'var(--accent-primary)' }} />
             <span className="datepicker-btn-label">
               {formatLocalizedDate(activeDateObj.id, currentLang, false)} 2026
             </span>
@@ -304,7 +304,7 @@ export function Timeline({
                 onClick={() => onDateChange(AVAILABLE_DATES[m.dayIndex].id)}
                 style={{
                   cursor: 'pointer',
-                  color: isCurrent ? 'var(--accent-cyan)' : 'inherit',
+                  color: isCurrent ? 'var(--accent-primary)' : 'inherit',
                   fontWeight: isCurrent ? 700 : 400,
                   transform: isCurrent ? 'scale(1.08)' : 'none',
                   transition: 'all 0.15s ease',
