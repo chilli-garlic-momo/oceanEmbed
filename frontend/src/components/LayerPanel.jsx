@@ -1,13 +1,11 @@
 import React from 'react';
-import { Flame, Thermometer, Layers, Beaker, Info } from 'lucide-react';
+import { Flame, Thermometer, Info } from 'lucide-react';
 import { STANDARD_DEPTHS } from '../data/mock';
 import { getTranslation } from '../data/i18n';
 
 const LAYER_CONFIGS = [
   { id: 'tchp', icon: Flame, iconColorClass: 'icon-fire-colored' },
   { id: 'temperature', icon: Thermometer, iconColorClass: 'icon-thermometer-colored' },
-  { id: 'd20', icon: Layers, iconColorClass: 'icon-d20-colored' },
-  { id: 'mld', icon: Beaker, iconColorClass: 'icon-mld-colored' },
 ];
 
 export function LayerPanel({

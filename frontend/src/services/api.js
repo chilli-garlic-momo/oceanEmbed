@@ -21,6 +21,59 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let lastValidField = null;
 let lastValidProfile = null;
 
+function toMapField(payload, valueKey, layer, depth = null) {
+  const latitude = payload.latitude;
+  const longitude = payload.longitude;
+  // Metadata coordinates are south-to-north; Leaflet's raster starts at its northern edge.
+  // This only changes row order for display and never interpolates the native 100 × 240 grid.
+  const grid = payload[valueKey].slice().reverse();
+  return {
+    layer,
+    depth,
+    date: payload.date,
+    bounds: {
+      minLat: latitude[0],
+      maxLat: latitude[latitude.length - 1],
+      minLon: longitude[0],
+      maxLon: longitude[longitude.length - 1],
+    },
+    rows: latitude.length,
+    cols: longitude.length,
+    grid,
+    modelVersion: payload.model_version,
+  };
+}
+
+function toLegacyProfile(payload) {
+  const profile = payload.depths_m.map((depth, index) => {
+    const predictedTemp = payload.temperature_degC[index];
+    const uncertainty = payload.sigma_degC[index];
+    return {
+      depth,
+      predictedTemp,
+      uncertainty,
+      tempMin: predictedTemp === null || uncertainty === null ? null : predictedTemp - uncertainty,
+      tempMax: predictedTemp === null || uncertainty === null ? null : predictedTemp + uncertainty,
+      argoTemp: null,
+    };
+  });
+  return {
+    isLand: Boolean(payload.masked),
+    lat: payload.lat,
+    lon: payload.lon,
+    date: payload.date,
+    modelVersion: payload.model_version,
+    inTrainingSet: payload.in_training_set,
+    metrics: {
+      tchp: payload.tchp_kJ_cm2,
+      d20: payload.d20_m,
+      mld: payload.mld_m,
+      sst: payload.temperature_degC[0],
+    },
+    profile,
+  };
+}
+
 /**
  * GET /profile?lat={lat}&lon={lon}&date={date}
  * Returns subsurface temperature profile, metrics, uncertainty bounds, and nearest ARGO float
@@ -56,7 +109,7 @@ export async function getProfile({ lat, lon, date }) {
     if (!res.ok) {
       throw new Error(`Profile fetch failed with status: ${res.status}`);
     }
-    const data = await res.json();
+    const data = toLegacyProfile(await res.json());
     lastValidProfile = data;
     return data;
   } catch (err) {
@@ -90,12 +143,20 @@ export async function getField({ layer = 'tchp', depth = 0, date }) {
   }
 
   try {
-    const url = `${API_BASE_URL}/field?layer=${layer}&depth=${depth}&date=${encodeURIComponent(date)}`;
+    if (layer !== 'temperature' && layer !== 'tchp') {
+      throw new Error(`${layer} is available per location only; the model API does not provide a basin field for it.`);
+    }
+    const url = layer === 'tchp'
+      ? `${API_BASE_URL}/tchp?date=${encodeURIComponent(date)}`
+      : `${API_BASE_URL}/field?depth=${depth}&date=${encodeURIComponent(date)}`;
     const res = await fetch(url);
     if (!res.ok) {
       throw new Error(`Field fetch failed with status: ${res.status}`);
     }
-    const data = await res.json();
+    const payload = await res.json();
+    const data = layer === 'tchp'
+      ? toMapField(payload, 'tchp_kJ_cm2', 'tchp')
+      : toMapField(payload, 'temperature_degC', 'temperature', depth);
     lastValidField = data;
     return data;
   } catch (err) {
@@ -114,7 +175,7 @@ export async function getField({ layer = 'tchp', depth = 0, date }) {
  * GET /tchp?date={date}
  */
 export async function getTCHP({ date }) {
-  return getField({ layer: 'tchp', depth: 0, date });
+  return getField({ layer: 'tchp', date });
 }
 
 /**

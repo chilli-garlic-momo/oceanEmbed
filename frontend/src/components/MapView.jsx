@@ -340,36 +340,9 @@ export function MapView({
 
     ctx.putImageData(imgData, 0, 0);
 
-    // Upscale by 4x with bicubic smoothing for silky gradients
-    const upscaled = document.createElement('canvas');
-    const scaleFactor = 4;
-    upscaled.width = cols * scaleFactor;
-    upscaled.height = rows * scaleFactor;
-    const upCtx = upscaled.getContext('2d');
-    upCtx.imageSmoothingEnabled = true;
-    upCtx.imageSmoothingQuality = 'high';
-    upCtx.drawImage(canvas, 0, 0, upscaled.width, upscaled.height);
-
-    const finalImgData = upCtx.getImageData(0, 0, upscaled.width, upscaled.height);
-    const finalPixels = finalImgData.data;
-    const upRows = upscaled.height;
-    const upCols = upscaled.width;
-    const latSpan = bounds.maxLat - bounds.minLat;
-    const lonSpan = bounds.maxLon - bounds.minLon;
-
-    for (let y = 0; y < upRows; y++) {
-      const pixelLat = bounds.maxLat - (y / (upRows - 1)) * latSpan;
-      for (let x = 0; x < upCols; x++) {
-        const pixelLon = bounds.minLon + (x / (upCols - 1)) * lonSpan;
-        if (isLand(pixelLat, pixelLon)) {
-          const pIdx = (y * upCols + x) * 4;
-          finalPixels[pIdx + 3] = 0;
-        }
-      }
-    }
-    upCtx.putImageData(finalImgData, 0, 0);
-
-    const dataUrl = upscaled.toDataURL('image/png');
+    // Keep the store's native grid intact: NaNs already encode land/below-bottom cells.
+    // Leaflet performs projection; this client does not invent a smoother field.
+    const dataUrl = canvas.toDataURL('image/png');
     RASTER_DATAURL_CACHE.set(cacheKey, dataUrl);
 
     if (imageOverlayRef.current) {
