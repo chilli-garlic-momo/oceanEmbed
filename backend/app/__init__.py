@@ -1,0 +1,1 @@
+"""OceanEmbed precomputed prediction API."""
