@@ -31,6 +31,14 @@ def test_profile_ocean_cell(client):
     assert data.get("masked") is not True
 
 
+def test_profile_seasonal_date_mapping(client):
+    response = client.get("/profile?lat=15.0&lon=85.0&date=2026-09-30")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["temperature_degC"]) == 15
+    assert data["tchp_kJ_cm2"] is not None
+
+
 def test_profile_land_cell_returns_null_and_masked(client):
     response = client.get("/profile?lat=20.0&lon=78.0&date=2020-05-15")
     assert response.status_code == 200
@@ -55,6 +63,22 @@ def test_tchp_endpoint(client):
     assert len(data["tchp_kJ_cm2"][0]) == 240
 
 
+def test_d20_endpoint(client):
+    response = client.get("/d20?date=2020-05-15")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["d20_m"]) == 100
+    assert len(data["d20_m"][0]) == 240
+
+
+def test_mld_endpoint(client):
+    response = client.get("/mld?date=2020-05-15")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["mld_m"]) == 100
+    assert len(data["mld_m"][0]) == 240
+
+
 def test_out_of_bounds_returns_400(client):
     response = client.get("/profile?lat=60.0&lon=85.0&date=2020-05-15")
     assert response.status_code == 400
@@ -65,6 +89,6 @@ def test_invalid_depth_returns_400(client):
     assert response.status_code == 400
 
 
-def test_unavailable_date_returns_404(client):
-    response = client.get("/profile?lat=15.0&lon=85.0&date=1990-01-01")
+def test_invalid_date_returns_404(client):
+    response = client.get("/profile?lat=15.0&lon=85.0&date=invalid-date")
     assert response.status_code == 404
