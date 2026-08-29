@@ -62,6 +62,8 @@ class PredictionStore:
         except KeyError as exc:
             raise KeyError(f"date unavailable; available range is {self.available_range}") from exc
 
+
+
     def nearest_cell(self, lat: float, lon: float) -> tuple[int, int, float, float]:
         if not (self.latitude.min() <= lat <= self.latitude.max()) or not (self.longitude.min() <= lon <= self.longitude.max()):
             raise ValueError(
