@@ -9,11 +9,13 @@ This document explains how the prototype prediction system works, how the fronte
 Rather than generating arbitrary or hardcoded dummy numbers, the prototype uses a **dataset-grounded physics extraction and dynamic uncertainty engine** (`backend/app/predictor.py`).
 
 ### A. Ground-Truth Thermal Profile Extraction
-- The downloaded dataset (`backend/data/oceanembed_cube.zarr`) contains real oceanographic observations and reanalysis data for the North Indian Ocean across 2,550 days, 100 latitudes, 240 longitudes, and 15 standard ocean depths ($0\,\text{m}$ to $1,000\,\text{m}$).
+- The source dataset is downloaded from Kaggle: [chilligarlicmomo/oceanembeddataset](https://www.kaggle.com/datasets/chilligarlicmomo/oceanembeddataset).
+- The dataset cube (`backend/data/oceanembed_cube.zarr`) contains real oceanographic observations and reanalysis data for the North Indian Ocean across 2,550 days, 100 latitudes, 240 longitudes, and 15 standard ocean depths ($0\,\text{m}$ to $1,000\,\text{m}$).
 - At surface ($0\,\text{m}$), the engine pulls sea surface temperature (`sst`).
 - Across subsurface depths ($5\,\text{m}$ to $700\,\text{m}$), it extracts the true ocean potential temperature (`thetao`).
 - At the deep abyssal layer ($1,000\,\text{m}$), it smoothly models the deep temperature decay ($T_{1000} \approx 0.70 \cdot T_{700} + 2.0^\circ\text{C}$).
 - Linear vertical interpolation fills any singular missing levels within the ocean column while preserving exact land masking.
+
 
 ### B. Dynamic Physical Uncertainty Modeling ($\sigma$)
 Uncertainty $\sigma(z, y, x, t)$ is not static; it dynamically reflects real oceanographic confidence intervals:

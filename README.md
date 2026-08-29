@@ -20,9 +20,26 @@ To use the backend instead of the mock client, set `VITE_API_BASE_URL`, for exam
 VITE_API_BASE_URL=http://127.0.0.1:8000
 ```
 
+## Dataset Download (Kaggle)
+
+The prototype predictions and ML precomputation require the OceanEmbed V2 source dataset cube:
+* **Kaggle Dataset**: [chilligarlicmomo/oceanembeddataset](https://www.kaggle.com/datasets/chilligarlicmomo/oceanembeddataset)
+
+Place the extracted `oceanembed_cube.zarr` directory inside `backend/data/`:
+```text
+backend/data/
+  └── oceanembed_cube.zarr/
+```
+
+Alternatively, download directly using the Kaggle CLI:
+```powershell
+cd backend
+kaggle datasets download -d chilligarlicmomo/oceanembeddataset -p data --unzip
+```
+
 ## Run the backend
 
-The backend serves precomputed prediction Zarr stores along with the model contract metadata. A realistic dataset-grounded prediction store (`data/oceanembed_pred_2020.zarr`) and metadata (`data/oceanembed_meta.json`) are already generated from the downloaded V2 source cube (`backend/data/oceanembed_cube.zarr`).
+The backend serves precomputed prediction Zarr stores along with the model contract metadata. A realistic dataset-grounded prediction store (`data/oceanembed_pred_2020.zarr`) and metadata (`data/oceanembed_meta.json`) are generated from the downloaded V2 source cube (`backend/data/oceanembed_cube.zarr`).
 
 ```powershell
 cd backend
@@ -34,6 +51,7 @@ uvicorn app.main:app --reload
 ```
 
 The API will be available at `http://127.0.0.1:8000` with endpoints `/health`, `/profile`, `/field`, and `/tchp`.
+
 
 ## Precompute and Seamless Model Switching
 

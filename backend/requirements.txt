@@ -1,9 +1,22 @@
+# Core Web API
 fastapi>=0.115,<1.0
 uvicorn[standard]>=0.30,<1.0
+python-dotenv>=1.0
+
+# Scientific & Oceanographic Data (Zarr v3 / NetCDF / Xarray)
 numpy>=1.26,<3.0
-# The downloaded OceanEmbedDataset V2 cube is Zarr format 3.
+pandas>=2.2
 xarray>=2025.1
 zarr>=3.0,<4.0
 fsspec>=2024.1
-python-dotenv>=1.0
+
+# Machine Learning & TorchScript Runtime
 torch>=2.2
+
+# Testing & API Client
+httpx>=0.28
+httpx2>=2.12
+pytest>=8.0
+
+# Optional: Kaggle API for direct dataset download
+kaggle>=1.6.0
