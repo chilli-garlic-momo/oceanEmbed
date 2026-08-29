@@ -16,6 +16,3 @@ backend/data/
 *.zarr/
 *.pt
 *.zip
-
-# Prototype Docs
-PROTOTYPE_ARCHITECTURE.md
