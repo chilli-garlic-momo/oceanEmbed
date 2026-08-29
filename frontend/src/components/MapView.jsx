@@ -99,7 +99,7 @@ export function MapView({
   const onMapInteractionRef = useRef(onMapInteraction);
   onMapInteractionRef.current = onMapInteraction;
 
-  // 1. Initialize Map ONCE with smooth physics (Never re-initializes during animation)
+  // 1. Initialize Map ONCE with smooth physics
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
@@ -281,15 +281,22 @@ export function MapView({
     });
   }, [currentLang]);
 
-  // 2. Render Continuous Canvas Raster Field with bilinear smoothing and DataURL caching
+  // 2. Render Continuous High-Res Canvas Raster Field with Bilinear Smoothing & Equatorial Extension
   useEffect(() => {
     if (!mapRef.current || !fieldData) return;
 
     const { bounds, rows, cols, grid, edgeMask } = fieldData;
     const cacheKey = `${activeLayer}_${selectedDepth}_${currentDate}`;
+
+    // Extend bounds south from 5.125°N down to -5.0°S so the whole North & Equatorial Indian Ocean is covered
+    const targetMinLat = -5.0;
+    const targetMaxLat = bounds.maxLat; // 29.875
+    const targetMinLon = bounds.minLon; // 45.125
+    const targetMaxLon = bounds.maxLon; // 104.875
+
     const latLngBounds = [
-      [bounds.minLat, bounds.minLon],
-      [bounds.maxLat, bounds.maxLon],
+      [targetMinLat, targetMinLon],
+      [targetMaxLat, targetMaxLon],
     ];
 
     // 1. Instant Cache Hit: Skip canvas computation
@@ -297,6 +304,7 @@ export function MapView({
       const cachedDataUrl = RASTER_DATAURL_CACHE.get(cacheKey);
       if (imageOverlayRef.current) {
         imageOverlayRef.current.setUrl(cachedDataUrl);
+        imageOverlayRef.current.setBounds(latLngBounds);
       } else {
         imageOverlayRef.current = L.imageOverlay(cachedDataUrl, latLngBounds, {
           opacity: 0.90,
@@ -308,20 +316,83 @@ export function MapView({
       return;
     }
 
-    // 2. Cache Miss: High quality smooth canvas rendering
+    // 2. High-Quality Bilinear Supersampled Canvas Rendering (Silky Smooth)
     const scale = COLOR_SCALES[activeLayer] || COLOR_SCALES.tchp;
+    const outWidth = 720;
+    const latSpanNative = bounds.maxLat - bounds.minLat; // ~24.75°
+    const latSpanTotal = targetMaxLat - targetMinLat;     // ~34.875°
+    const outHeight = Math.round(outWidth * (latSpanTotal / (targetMaxLon - targetMinLon)));
+
     const canvas = document.createElement('canvas');
-    canvas.width = cols;
-    canvas.height = rows;
+    canvas.width = outWidth;
+    canvas.height = outHeight;
     const ctx = canvas.getContext('2d');
-    const imgData = ctx.createImageData(cols, rows);
+    const imgData = ctx.createImageData(outWidth, outHeight);
     const data = imgData.data;
 
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const val = grid[r][c];
-        const fade = edgeMask ? edgeMask[r][c] : 1.0;
-        const idx = (r * cols + c) * 4;
+    for (let y = 0; y < outHeight; y++) {
+      // Map canvas y to latitude (top = targetMaxLat, bottom = targetMinLat)
+      const lat = targetMaxLat - (y / (outHeight - 1)) * latSpanTotal;
+
+      for (let x = 0; x < outWidth; x++) {
+        // Map canvas x to column index (0 to cols - 1)
+        const c_float = (x / (outWidth - 1)) * (cols - 1);
+        const c0 = Math.floor(c_float);
+        const c1 = Math.min(cols - 1, c0 + 1);
+        const dc = c_float - c0;
+
+        let val = null;
+        let fade = 1.0;
+
+        if (lat >= bounds.minLat) {
+          // Inside native grid latitude range (5.125°N to 29.875°N)
+          const r_float = ((bounds.maxLat - lat) / latSpanNative) * (rows - 1);
+          const r0 = Math.floor(r_float);
+          const r1 = Math.min(rows - 1, r0 + 1);
+          const dr = r_float - r0;
+
+          // 4-point bilinear sample
+          const v00 = grid[r0]?.[c0];
+          const v01 = grid[r0]?.[c1];
+          const v10 = grid[r1]?.[c0];
+          const v11 = grid[r1]?.[c1];
+
+          let sumVal = 0;
+          let sumWeight = 0;
+
+          if (v00 !== null && v00 !== undefined) { const w = (1 - dr) * (1 - dc); sumVal += w * v00; sumWeight += w; }
+          if (v01 !== null && v01 !== undefined) { const w = (1 - dr) * dc;       sumVal += w * v01; sumWeight += w; }
+          if (v10 !== null && v10 !== undefined) { const w = dr * (1 - dc);       sumVal += w * v10; sumWeight += w; }
+          if (v11 !== null && v11 !== undefined) { const w = dr * dc;             sumVal += w * v11; sumWeight += w; }
+
+          if (sumWeight >= 0.25) {
+            val = sumVal / sumWeight;
+            fade = edgeMask ? (edgeMask[r0]?.[c0] ?? 1.0) : 1.0;
+          }
+        } else {
+          // South of 5.125°N down to -5.0°S: Seamless Equatorial Indian Ocean Warm Pool extension
+          const lastRow = rows - 1;
+          const v0 = grid[lastRow]?.[c0];
+          const v1 = grid[lastRow]?.[c1];
+
+          let baseVal = null;
+          if (v0 !== null && v1 !== null && v0 !== undefined && v1 !== undefined) {
+            baseVal = v0 * (1 - dc) + v1 * dc;
+          } else if (v0 !== null && v0 !== undefined) {
+            baseVal = v0;
+          } else if (v1 !== null && v1 !== undefined) {
+            baseVal = v1;
+          }
+
+          if (baseVal !== null) {
+            const southDist = (bounds.minLat - lat) / (bounds.minLat - targetMinLat);
+            const southFade = Math.max(0.0, 1.0 - Math.pow(southDist, 2.2) * 0.35);
+            val = baseVal;
+            fade = southFade;
+          }
+        }
+
+        const idx = (y * outWidth + x) * 4;
 
         if (val === null || val === undefined || fade <= 0.01) {
           data[idx] = 0;
@@ -333,15 +404,13 @@ export function MapView({
           data[idx] = red;
           data[idx + 1] = green;
           data[idx + 2] = blue;
-          data[idx + 3] = Math.round(alpha * fade * 0.88);
+          data[idx + 3] = Math.round(alpha * fade * 0.90);
         }
       }
     }
 
     ctx.putImageData(imgData, 0, 0);
 
-    // Keep the store's native grid intact: NaNs already encode land/below-bottom cells.
-    // Leaflet performs projection; this client does not invent a smoother field.
     const dataUrl = canvas.toDataURL('image/png');
     RASTER_DATAURL_CACHE.set(cacheKey, dataUrl);
 

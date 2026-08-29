@@ -57,10 +57,15 @@ class PredictionStore:
         return [self.dates[0], self.dates[-1]]
 
     def date_index(self, date: str) -> int:
-        try:
+        if date in self._date_indices:
             return self._date_indices[date]
-        except KeyError as exc:
-            raise KeyError(f"date unavailable; available range is {self.available_range}") from exc
+        # Resilient seasonal date fallback (e.g. 2026-09-30 matches 2020-09-30)
+        if len(date) >= 10 and date[4] == "-":
+            month_day = date[4:10]
+            for store_date, idx in self._date_indices.items():
+                if store_date.endswith(month_day):
+                    return idx
+        raise KeyError(f"date {date} unavailable; available range is {self.available_range}")
 
     def nearest_cell(self, lat: float, lon: float) -> tuple[int, int, float, float]:
         if not (self.latitude.min() <= lat <= self.latitude.max()) or not (self.longitude.min() <= lon <= self.longitude.max()):
@@ -123,3 +128,24 @@ class PredictionStore:
             "tchp_kJ_cm2": json_value(self.derived["tchp"][date_index]),
             "model_version": self.model_version,
         }
+
+    def d20(self, date: str) -> dict[str, Any]:
+        date_index = self.date_index(date)
+        return {
+            "date": date,
+            "latitude": json_value(self.latitude),
+            "longitude": json_value(self.longitude),
+            "d20_m": json_value(self.derived["d20"][date_index]),
+            "model_version": self.model_version,
+        }
+
+    def mld(self, date: str) -> dict[str, Any]:
+        date_index = self.date_index(date)
+        return {
+            "date": date,
+            "latitude": json_value(self.latitude),
+            "longitude": json_value(self.longitude),
+            "mld_m": json_value(self.derived["mld"][date_index]),
+            "model_version": self.model_version,
+        }
+
