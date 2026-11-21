@@ -82,3 +82,14 @@ def field(depth: float, date: str, request: Request) -> dict[str, Any]:
 @app.get("/tchp")
 def tchp(date: str, request: Request) -> dict[str, Any]:
     return translate_errors(lambda: get_store(request).tchp(date))
+
+
+@app.get("/d20")
+def d20(date: str, request: Request) -> dict[str, Any]:
+    return translate_errors(lambda: get_store(request).d20(date))
+
+
+@app.get("/mld")
+def mld(date: str, request: Request) -> dict[str, Any]:
+    return translate_errors(lambda: get_store(request).mld(date))
+

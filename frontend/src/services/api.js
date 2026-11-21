@@ -143,20 +143,32 @@ export async function getField({ layer = 'tchp', depth = 0, date }) {
   }
 
   try {
-    if (layer !== 'temperature' && layer !== 'tchp') {
-      throw new Error(`${layer} is available per location only; the model API does not provide a basin field for it.`);
+    let url;
+    if (layer === 'tchp') {
+      url = `${API_BASE_URL}/tchp?date=${encodeURIComponent(date)}`;
+    } else if (layer === 'd20') {
+      url = `${API_BASE_URL}/d20?date=${encodeURIComponent(date)}`;
+    } else if (layer === 'mld') {
+      url = `${API_BASE_URL}/mld?date=${encodeURIComponent(date)}`;
+    } else {
+      url = `${API_BASE_URL}/field?depth=${depth}&date=${encodeURIComponent(date)}`;
     }
-    const url = layer === 'tchp'
-      ? `${API_BASE_URL}/tchp?date=${encodeURIComponent(date)}`
-      : `${API_BASE_URL}/field?depth=${depth}&date=${encodeURIComponent(date)}`;
+
     const res = await fetch(url);
     if (!res.ok) {
       throw new Error(`Field fetch failed with status: ${res.status}`);
     }
     const payload = await res.json();
-    const data = layer === 'tchp'
-      ? toMapField(payload, 'tchp_kJ_cm2', 'tchp')
-      : toMapField(payload, 'temperature_degC', 'temperature', depth);
+    let data;
+    if (layer === 'tchp') {
+      data = toMapField(payload, 'tchp_kJ_cm2', 'tchp');
+    } else if (layer === 'd20') {
+      data = toMapField(payload, 'd20_m', 'd20');
+    } else if (layer === 'mld') {
+      data = toMapField(payload, 'mld_m', 'mld');
+    } else {
+      data = toMapField(payload, 'temperature_degC', 'temperature', depth);
+    }
     lastValidField = data;
     return data;
   } catch (err) {

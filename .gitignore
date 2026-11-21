@@ -1,9 +1,18 @@
+# Node & Frontend
 node_modules/
 dist/
+.env.local
+.env.*.local
+
+# Python & Environment
 .env
 .venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# Data, Checkpoints & Large Files
 backend/data/
 *.zarr/
+*.pt
+*.zip

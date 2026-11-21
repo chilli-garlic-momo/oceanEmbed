@@ -81,8 +81,20 @@ export function LocationPanel({
     qcStatus: 'Good (WMO Passed)',
   };
 
-  const translatedBasin = t(`map.basins.${basin}`) || basin || 'Bay of Bengal';
+  const rawBasin = profileData?.basin || selectedLocation?.basin || (
+    lat >= 8.0 && lon >= 79.5 && lon <= 98.0
+      ? (lon > 92.0 && lat < 15.0 ? 'Andaman Sea' : 'Bay of Bengal')
+      : (lat >= 8.0 && lon >= 50.0 && lon < 77.5
+          ? (lat <= 14.0 && lon >= 71.0 ? 'Lakshadweep Sea' : 'Arabian Sea')
+          : 'Equatorial Indian Ocean')
+  );
+
+  const translatedBasin = (rawBasin && typeof rawBasin === 'string' && !rawBasin.includes('undefined'))
+    ? (t(`map.basins.${rawBasin}`) || rawBasin)
+    : 'Bay of Bengal';
+
   const hasElevatedHeat = (metrics?.tchp ?? 0) >= 80;
+  const sstVal = typeof metrics?.sst === 'number' ? metrics.sst.toFixed(1) : (metrics?.sst ?? '30.8');
 
   return (
     <aside className="right-panel">
@@ -166,8 +178,9 @@ export function LocationPanel({
 
         <div className="profile-chart-header-row">
           <div className="profile-chart-title">{t('location.subsurfaceTempProfile')}</div>
-          <span className="profile-surface-tag">{t('location.sstLabel')} {metrics?.sst ?? 30.8}°C</span>
+          <span className="profile-surface-tag">{t('location.sstLabel')} {sstVal}°C</span>
         </div>
+
 
         <div className="profile-chart-legend">
           <div className="legend-entry">

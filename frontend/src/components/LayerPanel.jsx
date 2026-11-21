@@ -1,12 +1,15 @@
 import React from 'react';
-import { Flame, Thermometer, Info } from 'lucide-react';
+import { Flame, Thermometer, Waves, Layers, Info } from 'lucide-react';
 import { STANDARD_DEPTHS } from '../data/mock';
 import { getTranslation } from '../data/i18n';
 
 const LAYER_CONFIGS = [
   { id: 'tchp', icon: Flame, iconColorClass: 'icon-fire-colored' },
   { id: 'temperature', icon: Thermometer, iconColorClass: 'icon-thermometer-colored' },
+  { id: 'd20', icon: Waves, iconColorClass: 'icon-d20-colored' },
+  { id: 'mld', icon: Layers, iconColorClass: 'icon-mld-colored' },
 ];
+
 
 export function LayerPanel({
   activeLayer,
@@ -116,7 +119,7 @@ export function LayerPanel({
           <div className="depth-context-card">
             <div className="depth-context-header">
               <span className="depth-context-label">{t('layers.derivedMixedLayer')}</span>
-              <span className="depth-status-tag">Δσ = 0.125</span>
+              <span className="depth-status-tag">ΔT = 0.2°C</span>
             </div>
             <div className="depth-context-value">{t('layers.mldDepthVal')}</div>
             <div className="depth-context-sub">{t('layers.mldDepthSub')}</div>

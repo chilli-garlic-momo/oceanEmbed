@@ -1581,5 +1581,6 @@ export function formatLocalizedDate(dateStr, lang = 'en', includeTime = true) {
   if (includeTime) {
     return `${dd} ${mName} ${yyyy} · 12:00 UTC (12Z)`;
   }
-  return `${dd} ${mName}`;
+  return `${dd} ${mName} ${yyyy}`;
 }
+

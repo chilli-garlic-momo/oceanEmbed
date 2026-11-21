@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Play, Pause, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
-import { AVAILABLE_DATES } from '../data/mock';
+import { Play, Pause, ChevronLeft, ChevronRight, Calendar, Sparkles } from 'lucide-react';
 import { getTranslation, formatLocalizedDate, MONTH_SHORT, MONTH_NAMES_FULL } from '../data/i18n';
 
 // 12 Monthly anchors for clean timeline navigation
@@ -20,6 +19,27 @@ const MONTH_ANCHORS = [
 ];
 
 const DAYS_OF_WEEK = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const AVAILABLE_YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026];
+
+// Helper: Calculate Day of Year (0-based)
+function getDayOfYear(year, monthIdx, day) {
+  const start = new Date(Date.UTC(year, 0, 1));
+  const curr = new Date(Date.UTC(year, monthIdx, day));
+  return Math.round((curr - start) / 86400000);
+}
+
+// Helper: Get total days in year (366 for leap years like 2020, 2024; 365 otherwise)
+function getDaysInYear(year) {
+  return new Date(Date.UTC(year, 1, 29)).getUTCMonth() === 1 ? 366 : 365;
+}
+
+// Helper: Convert Day of Year index (0..365) to YYYY-MM-DD
+function getDateFromDayOfYear(year, dayOfYear) {
+  const date = new Date(Date.UTC(year, 0, 1 + dayOfYear));
+  const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${mm}-${dd}`;
+}
 
 export function Timeline({
   currentDate = '2026-08-27',
@@ -35,21 +55,22 @@ export function Timeline({
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const calendarRef = useRef(null);
 
-  const currentIndex = AVAILABLE_DATES.findIndex((d) => d.id === currentDate);
-  const safeIndex = currentIndex >= 0 ? currentIndex : 238; // Default 27 AUG (Day index 238)
+  // Parse active date components
+  const parsedYear = parseInt(currentDate.slice(0, 4), 10) || 2026;
+  const parsedMonthIdx = (parseInt(currentDate.slice(5, 7), 10) || 8) - 1;
+  const parsedDay = parseInt(currentDate.slice(8, 10), 10) || 27;
 
-  const activeDateObj = AVAILABLE_DATES[safeIndex] || AVAILABLE_DATES[238];
-  const progressPercent = (safeIndex / (AVAILABLE_DATES.length - 1)) * 100;
+  // Browsable Year & Month in popover
+  const [calendarViewYear, setCalendarViewYear] = useState(parsedYear);
+  const [calendarViewMonth, setCalendarViewMonth] = useState(parsedMonthIdx);
 
-  // Browsable month in popover (0 to 11 for 2026)
-  const [calendarViewMonth, setCalendarViewMonth] = useState(() => activeDateObj.monthIndex);
-
-  // Sync calendar month view with active date when date changes externally
+  // Sync calendar popover state when external date changes
   useEffect(() => {
+    setCalendarViewYear(parsedYear);
     if (!isCalendarOpen) {
-      setCalendarViewMonth(activeDateObj.monthIndex);
+      setCalendarViewMonth(parsedMonthIdx);
     }
-  }, [activeDateObj.monthIndex, isCalendarOpen]);
+  }, [parsedYear, parsedMonthIdx, isCalendarOpen]);
 
   // Close calendar popover on outside click
   useEffect(() => {
@@ -66,37 +87,77 @@ export function Timeline({
     };
   }, [isCalendarOpen]);
 
+  // Compute total days and current slider index for active year
+  const totalDaysInYear = getDaysInYear(parsedYear);
+  const currentDayOfYear = Math.min(totalDaysInYear - 1, Math.max(0, getDayOfYear(parsedYear, parsedMonthIdx, parsedDay)));
+  const progressPercent = (currentDayOfYear / (totalDaysInYear - 1)) * 100;
+
   // Move exactly 1 day backward
   const handlePrevDay = useCallback(() => {
-    if (safeIndex > 0) {
-      onDateChange(AVAILABLE_DATES[safeIndex - 1].id);
-    }
-  }, [safeIndex, onDateChange]);
+    const curr = new Date(Date.UTC(parsedYear, parsedMonthIdx, parsedDay));
+    curr.setUTCDate(curr.getUTCDate() - 1);
+    const yyyy = curr.getUTCFullYear();
+    const mm = String(curr.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(curr.getUTCDate()).padStart(2, '0');
+    onDateChange(`${yyyy}-${mm}-${dd}`);
+  }, [parsedYear, parsedMonthIdx, parsedDay, onDateChange]);
 
   // Move exactly 1 day forward
   const handleNextDay = useCallback(() => {
-    if (safeIndex < AVAILABLE_DATES.length - 1) {
-      onDateChange(AVAILABLE_DATES[safeIndex + 1].id);
-    }
-  }, [safeIndex, onDateChange]);
+    const curr = new Date(Date.UTC(parsedYear, parsedMonthIdx, parsedDay));
+    curr.setUTCDate(curr.getUTCDate() + 1);
+    const yyyy = curr.getUTCFullYear();
+    const mm = String(curr.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(curr.getUTCDate()).padStart(2, '0');
+    onDateChange(`${yyyy}-${mm}-${dd}`);
+  }, [parsedYear, parsedMonthIdx, parsedDay, onDateChange]);
 
-  // Slider scrubber
+  // Direct Slider scrubber
   const handleSliderChange = (e) => {
-    const idx = parseInt(e.target.value, 10);
-    if (AVAILABLE_DATES[idx]) {
-      onDateChange(AVAILABLE_DATES[idx].id);
+    const dayIdx = parseInt(e.target.value, 10);
+    const dateStr = getDateFromDayOfYear(parsedYear, dayIdx);
+    onDateChange(dateStr);
+  };
+
+  // Calendar month / year navigation
+  const handlePrevMonth = (e) => {
+    e.stopPropagation();
+    if (calendarViewMonth > 0) {
+      setCalendarViewMonth(calendarViewMonth - 1);
+    } else {
+      setCalendarViewMonth(11);
+      setCalendarViewYear((y) => Math.max(AVAILABLE_YEARS[0], y - 1));
     }
   };
 
-  const prevDateObj = safeIndex > 0 ? AVAILABLE_DATES[safeIndex - 1] : null;
-  const nextDateObj = safeIndex < AVAILABLE_DATES.length - 1 ? AVAILABLE_DATES[safeIndex + 1] : null;
-  const currentMonthIdx = activeDateObj.monthIndex;
+  const handleNextMonth = (e) => {
+    e.stopPropagation();
+    if (calendarViewMonth < 11) {
+      setCalendarViewMonth(calendarViewMonth + 1);
+    } else {
+      setCalendarViewMonth(0);
+      setCalendarViewYear((y) => Math.min(AVAILABLE_YEARS[AVAILABLE_YEARS.length - 1], y + 1));
+    }
+  };
 
-  // Compute days in calendar view month (Year 2026)
+  const handleYearChange = (e) => {
+    const newYear = parseInt(e.target.value, 10);
+    setCalendarViewYear(newYear);
+    // Switch the active date to this year preserving month and day
+    const mm = String(parsedMonthIdx + 1).padStart(2, '0');
+    const dd = String(Math.min(parsedDay, new Date(Date.UTC(newYear, parsedMonthIdx + 1, 0)).getUTCDate())).padStart(2, '0');
+    onDateChange(`${newYear}-${mm}-${dd}`);
+  };
+
+  const handleSelectCalendarDate = (dateId) => {
+    onDateChange(dateId);
+    setIsCalendarOpen(false);
+  };
+
+  // Compute days in calendar view month
   const calendarDays = useMemo(() => {
-    const year = 2026;
-    const firstDayOfWeek = new Date(Date.UTC(year, calendarViewMonth, 1)).getUTCDay();
-    const daysInMonth = new Date(Date.UTC(year, calendarViewMonth + 1, 0)).getUTCDate();
+    const firstDayOfWeek = new Date(Date.UTC(calendarViewYear, calendarViewMonth, 1)).getUTCDay();
+    const daysInMonth = new Date(Date.UTC(calendarViewYear, calendarViewMonth + 1, 0)).getUTCDate();
 
     const cells = [];
     for (let i = 0; i < firstDayOfWeek; i++) {
@@ -105,7 +166,7 @@ export function Timeline({
     for (let d = 1; d <= daysInMonth; d++) {
       const mm = String(calendarViewMonth + 1).padStart(2, '0');
       const dd = String(d).padStart(2, '0');
-      const dateId = `2026-${mm}-${dd}`;
+      const dateId = `${calendarViewYear}-${mm}-${dd}`;
       const isSelected = dateId === currentDate;
       cells.push({
         isPadding: false,
@@ -116,39 +177,28 @@ export function Timeline({
       });
     }
     return cells;
-  }, [calendarViewMonth, currentDate]);
-
-  const handleSelectCalendarDate = (dateId) => {
-    onDateChange(dateId);
-    setIsCalendarOpen(false);
-  };
-
-  const handlePrevMonth = (e) => {
-    e.stopPropagation();
-    setCalendarViewMonth((prev) => (prev > 0 ? prev - 1 : 11));
-  };
-
-  const handleNextMonth = (e) => {
-    e.stopPropagation();
-    setCalendarViewMonth((prev) => (prev < 11 ? prev + 1 : 0));
-  };
+  }, [calendarViewYear, calendarViewMonth, currentDate]);
 
   const monthNameView = (MONTH_NAMES_FULL[currentLang] || MONTH_NAMES_FULL.en)[calendarViewMonth];
+  const shortMonths = MONTH_SHORT[currentLang] || MONTH_SHORT.en;
+
+  // Previous and next date strings
+  const prevDateStr = getDateFromDayOfYear(parsedYear, Math.max(0, currentDayOfYear - 1));
+  const nextDateStr = getDateFromDayOfYear(parsedYear, Math.min(totalDaysInYear - 1, currentDayOfYear + 1));
 
   return (
     <div className="app-timeline">
       {/* 1. Direct Date Navigation: ‹ Previous Day  [📅 27 Aug 2026]  Next Day › */}
       <div className="timeline-nav-group" ref={calendarRef}>
-        {/* Previous Day Button (Exact 1-Day Step) */}
+        {/* Previous Day Button */}
         <button
           id="btn-prev-date"
           className="timeline-step-btn"
           onClick={handlePrevDay}
-          disabled={safeIndex === 0}
-          title={prevDateObj ? `Previous Day: ${prevDateObj.id}` : 'Earliest date in range (1 Jan 2026)'}
+          title={`Previous Day: ${prevDateStr}`}
         >
           <ChevronLeft size={14} />
-          <span>{prevDateObj ? formatLocalizedDate(prevDateObj.id, currentLang, false) : '—'}</span>
+          <span>{formatLocalizedDate(prevDateStr, currentLang, false)}</span>
         </button>
 
         {/* Compact Glass Date Picker Trigger Pill */}
@@ -161,13 +211,14 @@ export function Timeline({
           >
             <Calendar size={13} style={{ color: 'var(--accent-primary)' }} />
             <span className="datepicker-btn-label">
-              {formatLocalizedDate(activeDateObj.id, currentLang, false)} 2026
+              {formatLocalizedDate(currentDate, currentLang, false)}
             </span>
           </button>
 
-          {/* Polished Glass Calendar Popover */}
+          {/* Polished Glass Calendar Popover with Year & Month Selection */}
           {isCalendarOpen && (
             <div className="calendar-popover-glass" onClick={(e) => e.stopPropagation()}>
+              {/* Year & Month Control Header */}
               <div className="calendar-popover-header">
                 <button
                   className="cal-month-nav-btn"
@@ -176,10 +227,23 @@ export function Timeline({
                 >
                   <ChevronLeft size={14} />
                 </button>
-                <div className="cal-header-title">
-                  <span>{monthNameView}</span>
-                  <span className="cal-header-year">2026</span>
+
+                <div className="cal-header-title-group">
+                  <span className="cal-header-month-text">{monthNameView}</span>
+                  <select
+                    className="cal-year-select"
+                    value={calendarViewYear}
+                    onChange={handleYearChange}
+                    title="Switch Analysis Year"
+                  >
+                    {AVAILABLE_YEARS.map((yr) => (
+                      <option key={yr} value={yr}>
+                        {yr} {yr === 2020 ? '· Dataset Ground Truth' : yr === 2026 ? '· Live Operational' : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
                 <button
                   className="cal-month-nav-btn"
                   onClick={handleNextMonth}
@@ -187,6 +251,19 @@ export function Timeline({
                 >
                   <ChevronRight size={14} />
                 </button>
+              </div>
+
+              {/* 1-Click Quick Month Grid */}
+              <div className="cal-quick-months-row">
+                {shortMonths.map((mShort, idx) => (
+                  <button
+                    key={idx}
+                    className={`cal-month-pill ${calendarViewMonth === idx ? 'active' : ''}`}
+                    onClick={() => setCalendarViewMonth(idx)}
+                  >
+                    {mShort}
+                  </button>
+                ))}
               </div>
 
               {/* Day of Week Headers */}
@@ -218,129 +295,129 @@ export function Timeline({
                 })}
               </div>
 
-              {/* Quick Jump & Range Footer */}
+              {/* Quick Jump & Year Presets Footer */}
               <div className="cal-quick-footer">
                 <button
                   className="cal-quick-btn"
                   onClick={() => handleSelectCalendarDate('2026-08-27')}
-                  title="Jump to Late-Monsoon Thermal Peak"
+                  title="Jump to 2026 Operational Late-Monsoon"
                 >
-                  <span>{t('timeline.jumpMonsoonCore')}</span>
+                  <span>2026 Monsoon</span>
+                </button>
+                <button
+                  className="cal-quick-btn"
+                  onClick={() => handleSelectCalendarDate('2020-05-15')}
+                  title="Jump to 2020 Pre-Monsoon Genesis (Amphan)"
+                >
+                  <Sparkles size={11} style={{ display: 'inline', marginRight: '3px' }} />
+                  <span>2020 Ground Truth</span>
                 </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Next Day Button (Exact 1-Day Step) */}
+        {/* Next Day Button */}
         <button
           id="btn-next-date"
           className="timeline-step-btn"
           onClick={handleNextDay}
-          disabled={safeIndex === AVAILABLE_DATES.length - 1}
-          title={nextDateObj ? `Next Day: ${nextDateObj.id}` : 'Latest date in range (31 Dec 2026)'}
+          title={`Next Day: ${nextDateStr}`}
         >
-          <span>{nextDateObj ? formatLocalizedDate(nextDateObj.id, currentLang, false) : '—'}</span>
+          <span>{formatLocalizedDate(nextDateStr, currentLang, false)}</span>
           <ChevronRight size={14} />
         </button>
       </div>
 
-      {/* 2. Center Timeline Track with 12 Month Markers */}
+      {/* 2. Interactive Scrubber Timeline with Active Year Badge */}
       <div className="timeline-center-track">
-        {/* Floating Bubble displaying exact daily date */}
-        <div className="timeline-bubble-container">
-          <div
-            className="timeline-active-bubble"
-            style={{ left: `${progressPercent}%` }}
-          >
-            {formatLocalizedDate(activeDateObj.id, currentLang, true)}
+        <div className="timeline-bubble-container" style={{ left: `${progressPercent}%` }}>
+          <div className="timeline-active-bubble">
+            <span>{formatLocalizedDate(currentDate, currentLang, true)}</span>
           </div>
         </div>
 
-        {/* 365-Day Continuous Scrubber Bar */}
         <div className="timeline-bar-wrapper">
-          <div
-            className="timeline-bar-fill"
-            style={{ width: `${progressPercent}%` }}
-          />
+          <div className="timeline-bar-fill" style={{ width: `${progressPercent}%` }} />
 
-          {/* Month Marker Nodes */}
+          {/* Month Node Markers */}
           <div className="timeline-nodes-row">
-            {MONTH_ANCHORS.map((m) => {
-              const isPassed = m.dayIndex <= safeIndex;
-              const isActive = m.month === currentMonthIdx;
+            {MONTH_ANCHORS.map((anchor) => {
+              const nodePercent = (anchor.dayIndex / (totalDaysInYear - 1)) * 100;
+              const isPassed = currentDayOfYear >= anchor.dayIndex;
+              const isActive = parsedMonthIdx === anchor.month;
+
               return (
                 <div
-                  key={m.month}
+                  key={anchor.month}
                   className={`timeline-node-dot ${isActive ? 'active' : isPassed ? 'passed' : ''}`}
-                  title={`1 ${AVAILABLE_DATES[m.dayIndex].month}`}
-                  onClick={() => onDateChange(AVAILABLE_DATES[m.dayIndex].id)}
+                  style={{ left: `${nodePercent}%` }}
                 />
               );
             })}
           </div>
 
           <input
-            id="timeline-range-slider"
             type="range"
+            id="timeline-range-slider"
             min="0"
-            max={AVAILABLE_DATES.length - 1}
-            step="1"
-            value={safeIndex}
+            max={totalDaysInYear - 1}
+            value={currentDayOfYear}
             onChange={handleSliderChange}
             className="timeline-range-input"
-            aria-label="365-Day Timeline Scrubber"
+            aria-label="Oceanographic Time Scrubber"
           />
         </div>
 
-        {/* 12 Monthly Markers across the 1-Year Scope */}
+        {/* Month Labels with Click-to-Jump */}
         <div className="timeline-labels-row">
-          {MONTH_ANCHORS.map((m) => {
-            const isCurrent = m.month === currentMonthIdx;
-            const mText = (MONTH_SHORT[currentLang] || MONTH_SHORT.en)[m.month];
+          {shortMonths.map((mName, idx) => {
+            const anchor = MONTH_ANCHORS[idx];
+            const percent = (anchor.dayIndex / (totalDaysInYear - 1)) * 100;
+            const isCurrentMonth = parsedMonthIdx === idx;
+
             return (
               <span
-                key={m.month}
-                onClick={() => onDateChange(AVAILABLE_DATES[m.dayIndex].id)}
-                style={{
-                  cursor: 'pointer',
-                  color: isCurrent ? 'var(--accent-primary)' : 'inherit',
-                  fontWeight: isCurrent ? 700 : 400,
-                  transform: isCurrent ? 'scale(1.08)' : 'none',
-                  transition: 'all 0.15s ease',
+                key={idx}
+                className={`timeline-month-label ${isCurrentMonth ? 'active' : ''}`}
+                style={{ left: `${percent}%` }}
+                onClick={() => {
+                  const targetDate = getDateFromDayOfYear(parsedYear, anchor.dayIndex);
+                  onDateChange(targetDate);
                 }}
-                title={`Jump to 1 ${mText}`}
+                title={`Jump to 1 ${mName} ${parsedYear}`}
               >
-                {mText}
+                {mName}
               </span>
             );
           })}
         </div>
       </div>
 
-      {/* 3. Right Step Forward & Playback Controls */}
+      {/* 3. Animation Controls: Play/Pause, Speed & Status */}
       <div className="timeline-action-right">
         <button
-          id="btn-animate-tchp"
-          className={`btn-play-action ${isPlaying ? 'playing' : ''}`}
+          id="btn-play-pause-animation"
+          className={`timeline-play-btn ${isPlaying ? 'playing' : ''}`}
           onClick={onTogglePlay}
-          title="Chronological 365-Day TCHP Heat Flux Animation"
+          title={isPlaying ? t('timeline.pauseAnimation') : t('timeline.playAnimation')}
         >
-          {isPlaying ? <Pause size={12} fill="currentColor" /> : <Play size={12} fill="currentColor" />}
+          {isPlaying ? <Pause size={14} /> : <Play size={14} />}
           <span>{isPlaying ? t('timeline.pause') : t('timeline.animateTchp')}</span>
         </button>
 
+        {/* Speed Selector */}
         <select
+          id="select-playback-speed"
           className="timeline-speed-dropdown"
           value={playSpeed}
-          onChange={(e) => onChangePlaySpeed(Number(e.target.value))}
-          title={t('timeline.speedTitle')}
+          onChange={(e) => onChangePlaySpeed(parseFloat(e.target.value))}
+          title={t('timeline.playbackSpeed')}
         >
-          <option value={0.25}>0.25×</option>
-          <option value={0.5}>0.5×</option>
-          <option value={1}>1.0×</option>
-          <option value={2}>2.0×</option>
-          <option value={4}>4.0×</option>
+          <option value="0.5">0.5×</option>
+          <option value="1">1.0×</option>
+          <option value="1.5">1.5×</option>
+          <option value="2">2.0×</option>
         </select>
       </div>
     </div>

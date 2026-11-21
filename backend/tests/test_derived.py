@@ -17,5 +17,6 @@ def test_tchp_is_zero_when_surface_is_cooler_than_26c():
 
 def test_mld_uses_10m_reference_and_preserves_no_crossing_as_nan():
     depths = np.array([0, 10, 20], dtype="float32")
-    profile = np.array([[[29.0]], [[28.0]], [[27.5]]], dtype="float32")
+    profile = np.array([[[29.0]], [[28.0]], [[27.9]]], dtype="float32")
     assert np.isnan(mld(profile, depths)[0, 0])
+
